@@ -40,6 +40,14 @@ dump_boot;
 
 # begin ramdisk changes
 
+# Set Android version for kernel
+ver="$(file_getprop /system/build.prop ro.build.version.release)"
+if [ ! -z "$ver" ]; then
+  patch_cmdline "androidboot.version" "androidboot.version=$ver"
+else
+  patch_cmdline "androidboot.version" ""
+fi
+
 # end ramdisk changes
 
 write_boot;
