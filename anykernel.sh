@@ -5,16 +5,11 @@
 # begin properties
 properties() { '
 kernel.string=QuicksilveR Kernel by 007
-do.devicecheck=1
+do.devicecheck=0
 do.modules=0
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
-device.name1=drg
-device.name2=DRG
-device.name3=DRG_sprout
-device.name4=
-device.name5=
 supported.versions=11.0-12.0
 supported.patchlevels=
 '; } # end properties
