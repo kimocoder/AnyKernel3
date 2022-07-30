@@ -4,13 +4,13 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=QuicksilveR Kernel by ghostrider-reborn
+kernel.string=QuicksilveR Kernel by imjyotiraditya
 do.devicecheck=1
 do.modules=1
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
-device.name1=lisa
+device.name1=odin
 device.name2=
 device.name3=
 device.name4=
