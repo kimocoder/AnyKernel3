@@ -415,7 +415,7 @@ flash_boot() {
 
 # flash_generic <name>
 flash_generic() {
-  local file img imgblock isro path;
+  local avb avbblock avbpath file flags img imgblock isro isunmounted path;
 
   cd $home;
   for file in $1 $1.img; do
@@ -438,12 +438,43 @@ flash_generic() {
       abort "$1 partition could not be found. Aborting...";
     fi;
     if [ "$path" == "/dev/block/mapper" ]; then
+      avb=$($bin/httools_static avb $1);
+      [ $? == 0 ] || abort "Failed to parse fstab entry for $1. Aborting...";
+      if [ "$avb" ]; then
+        flags=$($bin/httools_static disable-flags);
+        [ $? == 0 ] || abort "Failed to parse top-level vbmeta. Aborting...";
+        if [ "$flags" == "enabled" ]; then
+          ui_print " " "dm-verity detected! Patching $avb...";
+          for avbpath in /dev/block/bootdevice/by-name /dev/block/mapper; do
+            for file in $avb $avb$slot; do
+              if [ -e $avbpath/$file ]; then
+                avbblock=$avbpath/$file;
+                break 2;
+              fi;
+            done;
+          done;
+          cd $bin;
+          $bin/httools_static patch $1 $home/$img $avbblock || abort "Failed to patch $1 on $avb. Aborting...";
+          cd $home;
+        fi
+      fi
       $bin/lptools_static remove $1_ak3;
-      $bin/lptools_static create $1_ak3 $(wc -c < $img) || abort "Creating $1_ak3 failed. Aborting...";
-      $bin/lptools_static unmap $1_ak3 || abort "Unmapping $1_ak3 failed. Aborting...";
-      $bin/lptools_static map $1_ak3 || abort "Mapping $1_ak3 failed. Aborting...";
-      $bin/lptools_static replace $1_ak3 $1$slot || abort "Replacing $1$slot failed. Aborting...";
-      imgblock=/dev/block/mapper/$1_ak3;
+      if $bin/lptools_static create $1_ak3 $(wc -c < $img); then
+        $bin/lptools_static unmap $1_ak3 || abort "Unmapping $1_ak3 failed. Aborting...";
+        $bin/lptools_static map $1_ak3 || abort "Mapping $1_ak3 failed. Aborting...";
+        $bin/lptools_static replace $1_ak3 $1$slot || abort "Replacing $1$slot failed. Aborting...";
+        imgblock=/dev/block/mapper/$1_ak3;
+      else
+        ui_print "Creating $1_ak3 failed. Attempting to resize $1$slot...";
+        $bin/httools_static umount $1 || abort "Unmounting $1 failed. Aborting...";
+        if [ -e $path/$1-verity ]; then
+          $bin/lptools_static unmap $1-verity || abort "Unmapping $1-verity failed. Aborting...";
+        fi
+        $bin/lptools_static unmap $1$slot || abort "Unmapping $1$slot failed. Aborting...";
+        $bin/lptools_static resize $1$slot $(wc -c < $img) || abort "Resizing $1$slot failed. Aborting...";
+        $bin/lptools_static map $1$slot || abort "Mapping $1$slot failed. Aborting...";
+        isunmounted=1;
+      fi
     elif [ "$(wc -c < $img)" -gt "$(wc -c < $imgblock)" ]; then
       abort "New $1 image larger than $1 partition. Aborting...";
     fi;
@@ -467,6 +498,9 @@ flash_generic() {
     if [ "$isro" != 0 ]; then
       blockdev --setro $imgblock 2>/dev/null;
     fi;
+    if [ "$isunmounted" -a "$path" == "/dev/block/mapper" ]; then
+      $bin/httools_static mount $1 || abort "Mounting $1 failed. Aborting...";
+    fi
     touch ${1}_flashed;
   fi;
 }
@@ -750,7 +784,7 @@ setup_ak() {
   # clean up any template placeholder files
   cd $home;
   rm -f modules/system/lib/modules/placeholder patch/placeholder ramdisk/placeholder;
-  rmdir -p modules patch ramdisk;
+  rmdir -p modules patch ramdisk 2>/dev/null;
 
   # automate simple multi-partition setup for boot_img_hdr_v3 + vendor_boot
   if [ -e "/dev/block/bootdevice/by-name/vendor_boot$slot" -a ! -f vendor_setup ] && [ -f dtb -o -d vendor_ramdisk -o -d vendor_patch ]; then
