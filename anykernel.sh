@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=QuicksilveR Kernel by 007
+kernel.string=NetHunter kernel for Nothing Phone 1
 do.devicecheck=0
 do.modules=1
 do.systemless=1
@@ -15,7 +15,7 @@ device.name2=
 device.name3=
 device.name4=
 device.name5=
-supported.versions=11.0-12.0
+supported.versions=12.0-13.0
 supported.patchlevels=
 '; } # end properties
 
